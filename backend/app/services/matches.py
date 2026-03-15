@@ -2,7 +2,7 @@ from app.models import Match
 from app.crud import matches as crud
 from app.schemas.matches import MatchCreateSchema, MatchUpdateSchema
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from app.utils.exceptions import MatchCannotBeDeletedException, MatchNotFoundException
 
 class MatchService:
 
@@ -13,13 +13,24 @@ class MatchService:
         return await crud.get_all_matches(self, self.session)
 
     async def get_match(self, id: int) -> Match | None:
-        return await crud.get_match(self, self.session, id)
+        match = await crud.get_match(self, self.session, id)
+        if match is None:
+            raise MatchNotFoundException(id)
+        return match
 
     async def create_match(self, match_create: MatchCreateSchema) -> Match | None:
         return await crud.create_match(self, self.session, match_create)   
 
     async def update_match(self, id: int, match_update: MatchUpdateSchema) -> Match | None:
-        return await crud.update_match(self, self.session, id, match_update)
+        match = await crud.get_match(self, self.session, id)
+        if match is None:
+            raise MatchNotFoundException(id)
+        return await crud.update_match(self, self.session, match, match_update)
 
     async def delete_match(self, id: int) -> bool:
-        return await crud.delete_match(self, self.session, id)
+        match = await crud.get_match(self, self.session, id)
+        if match is None:
+            raise MatchNotFoundException(id)
+        deleted = await crud.delete_match(self, self.session, match)
+        if not deleted:
+            raise MatchCannotBeDeletedException(id)

@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.exc import SQLAlchemyError
-from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated, AsyncIterator
 from dotenv import load_dotenv
 import os
@@ -30,8 +30,12 @@ AsyncSessionLocal = async_sessionmaker(
 )
 
 
-async def get_session() -> AsyncIterator[async_sessionmaker]:
-    try:
-        yield AsyncSessionLocal
-    except SQLAlchemyError as e:
-        logger.exception(e)
+async def get_session() -> AsyncIterator[AsyncSession]:
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        except SQLAlchemyError as e:
+            logger.exception("SQLAlchemy error occurred during session execution: %s", e)
+            raise
+        finally:
+            await session.close()

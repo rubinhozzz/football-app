@@ -2,6 +2,7 @@ from app.crud import players as crud
 from app.models import Player
 from app.schemas.players import PlayerCreateSchema, PlayerUpdateSchema
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.utils.exceptions import PlayerCannotBeDeletedException, PlayerNotFoundException
 
 
 class PlayerService:
@@ -12,13 +13,25 @@ class PlayerService:
         return await crud.get_all_players(self, self.session)
 
     async def get_player(self, player_id: int) -> Player | None:
-        return await crud.get_player(self, self.session, player_id)
+        player = await crud.get_player(self, self.session, player_id)
+        if player is None:
+            raise PlayerNotFoundException(player_id)
+        return player
 
     async def create_player(self, player_create: PlayerCreateSchema) -> Player | None:
         return await crud.create_player(self, self.session, player_create)
 
     async def update_player(self, player_id: int, player_update: PlayerUpdateSchema) -> Player | None:
-        return await crud.update_player(self, self.session, player_id, player_update)
+        player = await crud.get_player(self, self.session, player_id)
+        if player is None:
+            raise PlayerNotFoundException(player_id)
+        return await crud.update_player(self, self.session, player, player_update)
 
     async def delete_player(self, player_id: int) -> bool:
-        return await crud.delete_player(self, self.session, player_id)
+        player = await crud.get_player(self, self.session, player_id)
+        if player is None:
+            raise PlayerNotFoundException(player_id)
+        deleted = await crud.delete_player(self, self.session, player)
+        if not deleted:
+            raise PlayerCannotBeDeletedException(player_id)
+        return deleted

@@ -1,4 +1,5 @@
-from fastapi import Depends, APIRouter, HTTPException, status
+from app.utils.exceptions import MatchCannotBeDeletedException, MatchNotFoundException
+from fastapi import Depends, APIRouter, HTTPException, status, Response
 from app.schemas.matches import MatchCreateSchema, MatchUpdateSchema, MatchSchema, MatchSlimSchema
 from app.database.database import get_session
 from app.services.matches import MatchService
@@ -52,10 +53,16 @@ async def update_match(id: int, match_update: MatchUpdateSchema, session=Depends
 @router.delete('/{id}', status_code=204)
 async def delete_match(id: int, session=Depends(get_session)):
     service = MatchService(session)
-    deleted = await service.delete_match(id)
-    if not deleted:
+    try:
+        deleted = await service.delete_match(id)
+    except MatchNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Match with id {id} not found."
+            detail=str(e)
         )
-    return None
+    except MatchCannotBeDeletedException as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e)
+        )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
