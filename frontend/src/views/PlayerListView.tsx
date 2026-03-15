@@ -1,8 +1,28 @@
+import { use, useEffect, useState } from 'react'
 import { Button } from '../components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from '../components/ui/table'
+import { fetchPlayers } from '../api/PlayerService'
+import type { Player } from '../types/Player';
 
 
 export function PlayerListView() {
+    const [players, setPlayers] = useState<Player[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const players = await fetchPlayers();
+                setPlayers(players);
+            } catch (error) {
+                console.error('Error fetching players:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, [])
+
     return (
         <>
             <div className="flex items-center justify-between mb-4">
@@ -22,16 +42,13 @@ export function PlayerListView() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    <TableRow>
-                        <TableCell>Lionel Messi</TableCell>
-                        <TableCell>Forward</TableCell>
-                        <TableCell>Paris Saint-Germain</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell>Cristiano Ronaldo</TableCell>
-                        <TableCell>Forward</TableCell>
-                        <TableCell>Manchester United</TableCell>
-                    </TableRow>
+                    {players.map((player) => (
+                        <TableRow key={player.id}>
+                            <TableCell>{player.firstname}</TableCell>
+                            <TableCell>{player.lastname}</TableCell>
+                            <TableCell>{player.country_code}</TableCell>
+                        </TableRow>
+                    ))}
                 </TableBody>
             </Table>
         </>
